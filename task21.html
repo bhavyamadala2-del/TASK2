@@ -1,68 +1,600 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Simple Todo List</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        padding: 20px;
-        background: linear-gradient(135deg, #4e8cff, #51a2ff);
-      }
-      #todoInput {
-        width: 220px;
-        padding: 8px;
-        margin-right: 8px;
-      }
-      #addButton {
-        padding: 8px 14px;
-      }
-      ul {
-        list-style: none;
-        padding: 0;
-      }
-      li {
-        display: flex;
-        align-items: center;
-        margin: 10px 0;
-      }
-      .deleteBtn {
-        margin-left: 12px;
-        padding: 4px 8px;
-        cursor: pointer;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>Todo List</h2>
-    <input id="todoInput" type="text" placeholder="Add a task" />
-    <button id="addButton">Add</button>
-    <ul id="todoList"></ul>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Todo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <script>
-      const input = document.getElementById('todoInput');
-      const addButton = document.getElementById('addButton');
-      const list = document.getElementById('todoList');
+    :root {
+      --purple:   #7c3aed;
+      --indigo:   #6366f1;
+      --pink:     #ec4899;
+      --surface:  rgba(255,255,255,0.07);
+      --border:   rgba(255,255,255,0.12);
+      --text:     #f1f5f9;
+      --muted:    rgba(255,255,255,0.45);
+      --radius:   18px;
+    }
 
-      addButton.onclick = function() {
-        const text = input.value.trim();
-        if (!text) return;
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0826 0%, #1a0533 40%, #0d1b4b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 16px;
+    }
 
-        const item = document.createElement('li');
-        item.textContent = text;
+    /* Ambient blobs */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+    }
+    body::before {
+      width: 420px; height: 420px;
+      background: radial-gradient(circle, rgba(124,58,237,0.35), transparent 70%);
+      top: -80px; left: -80px;
+    }
+    body::after {
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, rgba(236,72,153,0.25), transparent 70%);
+      bottom: -60px; right: -60px;
+    }
 
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete';
-        deleteButton.className = 'deleteBtn';
-        deleteButton.onclick = function() {
-          list.removeChild(item);
-        };
+    .app {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+    }
 
-        item.appendChild(deleteButton);
-        list.appendChild(item);
-        input.value = '';
-        input.focus();
+    /* ── Header ── */
+    .header {
+      margin-bottom: 28px;
+    }
+
+    .header .eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pink);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header .eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 18px; height: 2px;
+      background: var(--pink);
+      border-radius: 2px;
+    }
+
+    .header h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+
+    .header h1 span {
+      background: linear-gradient(90deg, var(--indigo), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header .date {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ── Progress ── */
+    .progress-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .progress-text {
+      flex: 1;
+    }
+
+    .progress-text .label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--purple), var(--pink));
+      border-radius: 99px;
+      transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    }
+
+    .progress-count {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+      text-align: right;
+      min-width: 48px;
+    }
+
+    .progress-count small {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: rgba(255,255,255,0.055);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      overflow: hidden;
+    }
+
+    /* ── Input row ── */
+    .input-row {
+      display: flex;
+      gap: 10px;
+      padding: 18px 18px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #todoInput {
+      flex: 1;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      padding: 11px 15px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #todoInput::placeholder { color: var(--muted); }
+
+    #todoInput:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.2);
+    }
+
+    #addButton {
+      background: linear-gradient(135deg, var(--purple), var(--indigo));
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 20px;
+      font-weight: 400;
+      width: 44px;
+      height: 44px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 15px rgba(124,58,237,0.4);
+    }
+
+    #addButton:hover {
+      transform: scale(1.07);
+      box-shadow: 0 6px 20px rgba(124,58,237,0.55);
+    }
+
+    #addButton:active { transform: scale(0.96); }
+
+    /* ── Filter tabs ── */
+    .filters {
+      display: flex;
+      gap: 4px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .filter-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 13px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: auto;
+      height: auto;
+    }
+
+    .filter-btn:hover { color: var(--text); }
+
+    .filter-btn.active {
+      background: rgba(124,58,237,0.2);
+      border-color: rgba(124,58,237,0.5);
+      color: #c4b5fd;
+    }
+
+    /* ── List ── */
+    #todoList {
+      list-style: none;
+      padding: 8px 0;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+
+    #todoList::-webkit-scrollbar { width: 4px; }
+    #todoList::-webkit-scrollbar-track { background: transparent; }
+    #todoList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+    /* ── Empty state ── */
+    .empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .empty .icon { font-size: 2.5rem; margin-bottom: 10px; opacity: 0.6; }
+    .empty p { font-size: 14px; }
+
+    /* ── Todo item ── */
+    li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.15s;
+      animation: slideIn 0.28s cubic-bezier(.4,0,.2,1) forwards;
+    }
+
+    li:last-child { border-bottom: none; }
+    li:hover { background: rgba(255,255,255,0.04); }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideOut {
+      to { opacity: 0; transform: translateX(20px); max-height: 0; padding: 0 18px; }
+    }
+
+    li.removing { animation: slideOut 0.25s ease forwards; }
+
+    /* Custom checkbox */
+    .check-wrap {
+      position: relative;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .check-wrap input[type="checkbox"] {
+      opacity: 0;
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      z-index: 1;
+      margin: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .check-box {
+      position: absolute;
+      inset: 0;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      background: transparent;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .check-box svg {
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all 0.2s;
+    }
+
+    .check-wrap input:checked ~ .check-box {
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      border-color: transparent;
+    }
+
+    .check-wrap input:checked ~ .check-box svg {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Task text */
+    .task-text {
+      flex: 1;
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 500;
+      line-height: 1.4;
+      transition: color 0.2s;
+      word-break: break-word;
+    }
+
+    li.done .task-text {
+      color: var(--muted);
+      text-decoration: line-through;
+      text-decoration-color: rgba(255,255,255,0.25);
+    }
+
+    /* Delete button */
+    .deleteBtn {
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.2);
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s, color 0.2s;
+      font-size: 15px;
+      padding: 0;
+    }
+
+    .deleteBtn:hover {
+      background: rgba(239,68,68,0.15);
+      color: #f87171;
+    }
+
+    /* ── Footer ── */
+    .card-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-count {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .clear-btn {
+      background: transparent;
+      border: none;
+      color: rgba(239,68,68,0.6);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 4px 0;
+      transition: color 0.2s;
+      width: auto; height: auto;
+    }
+
+    .clear-btn:hover { color: #f87171; }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <div class="header">
+      <div class="eyebrow">Productivity</div>
+      <h1>My <span>Tasks</span></h1>
+      <p class="date" id="dateLabel"></p>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-text">
+        <div class="label">Today's progress</div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+      </div>
+      <div class="progress-count">
+        <span id="doneCount">0</span>/<span id="totalCount">0</span>
+        <small>done</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="input-row">
+        <input id="todoInput" type="text" placeholder="Add a new task…" autocomplete="off"/>
+        <button id="addButton" title="Add task">＋</button>
+      </div>
+
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="active">Active</button>
+        <button class="filter-btn" data-filter="done">Done</button>
+      </div>
+
+      <ul id="todoList"></ul>
+
+      <div class="card-footer">
+        <span class="footer-count" id="footerCount">0 tasks</span>
+        <button class="clear-btn" id="clearDone">Clear completed</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const input      = document.getElementById('todoInput');
+    const addButton  = document.getElementById('addButton');
+    const list       = document.getElementById('todoList');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+
+    let currentFilter = 'all';
+
+    // Date label
+    document.getElementById('dateLabel').textContent =
+      new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+
+    // Add task
+    addButton.onclick = addTask;
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+    function addTask() {
+      const text = input.value.trim();
+      if (!text) return;
+      createItem(text);
+      input.value = '';
+      input.focus();
+      updateStats();
+    }
+
+    function createItem(text, done = false) {
+      const li = document.createElement('li');
+      if (done) li.classList.add('done');
+
+      // Checkbox
+      const checkWrap = document.createElement('div');
+      checkWrap.className = 'check-wrap';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = done;
+      const box = document.createElement('div');
+      box.className = 'check-box';
+      box.innerHTML = `<svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+        <path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+      checkWrap.appendChild(cb);
+      checkWrap.appendChild(box);
+
+      cb.onchange = () => {
+        li.classList.toggle('done', cb.checked);
+        applyFilter();
+        updateStats();
       };
-    </script>
-  </body>
+
+      // Text
+      const span = document.createElement('span');
+      span.className = 'task-text';
+      span.textContent = text;
+
+      // Delete
+      const del = document.createElement('button');
+      del.className = 'deleteBtn';
+      del.title = 'Delete';
+      del.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M1 1l11 11M12 1L1 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>`;
+      del.onclick = () => {
+        li.classList.add('removing');
+        li.addEventListener('animationend', () => { li.remove(); updateStats(); applyFilter(); });
+      };
+
+      li.appendChild(checkWrap);
+      li.appendChild(span);
+      li.appendChild(del);
+      list.appendChild(li);
+      updateEmpty();
+    }
+
+    // Filters
+    filterBtns.forEach(btn => {
+      btn.onclick = () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        applyFilter();
+      };
+    });
+
+    function applyFilter() {
+      const items = list.querySelectorAll('li:not(.removing)');
+      items.forEach(li => {
+        const done = li.classList.contains('done');
+        if (currentFilter === 'all')    li.style.display = '';
+        if (currentFilter === 'active') li.style.display = done ? 'none' : '';
+        if (currentFilter === 'done')   li.style.display = done ? '' : 'none';
+      });
+      updateEmpty();
+    }
+
+    function updateEmpty() {
+      const visible = [...list.querySelectorAll('li:not(.removing)')].filter(li => li.style.display !== 'none');
+      let empty = list.querySelector('.empty');
+      if (visible.length === 0) {
+        if (!empty) {
+          empty = document.createElement('li');
+          empty.className = 'empty';
+          empty.innerHTML = `<div class="icon">✓</div><p>Nothing here — you're all clear!</p>`;
+          list.appendChild(empty);
+        }
+      } else {
+        if (empty) empty.remove();
+      }
+    }
+
+    function updateStats() {
+      const all  = [...list.querySelectorAll('li:not(.empty):not(.removing)')];
+      const done = all.filter(li => li.classList.contains('done'));
+      const pct  = all.length ? Math.round((done.length / all.length) * 100) : 0;
+
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('doneCount').textContent  = done.length;
+      document.getElementById('totalCount').textContent = all.length;
+
+      const remaining = all.length - done.length;
+      document.getElementById('footerCount').textContent =
+        remaining === 0 && all.length > 0
+          ? 'All tasks complete 🎉'
+          : `${remaining} task${remaining !== 1 ? 's' : ''} remaining`;
+    }
+
+    // Clear completed
+    document.getElementById('clearDone').onclick = () => {
+      list.querySelectorAll('li.done:not(.empty)').forEach(li => {
+        li.classList.add('removing');
+        li.addEventListener('animationend', () => { li.remove(); updateStats(); applyFilter(); });
+      });
+    };
+
+    updateStats();
+    updateEmpty();
+  </script>
+</body>
 </html>
